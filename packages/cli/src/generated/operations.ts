@@ -2749,7 +2749,7 @@ export const OPERATIONS: Readonly<Record<string, GeneratedOperation>> = {
         "type": "json",
         "repeated": false,
         "required": true,
-        "description": "One of the three `background.kind` shapes."
+        "description": "The page background: one of three `kind`s."
       },
       {
         "name": "color_scheme",
@@ -2765,7 +2765,7 @@ export const OPERATIONS: Readonly<Record<string, GeneratedOperation>> = {
         "type": "json",
         "repeated": false,
         "required": true,
-        "description": "The palette: seven required six-digit hex entries, and three optional ones."
+        "description": "The palette: seven required six-digit hex colours, and three optional ones."
       },
       {
         "name": "colors_dark",
@@ -2781,7 +2781,7 @@ export const OPERATIONS: Readonly<Record<string, GeneratedOperation>> = {
         "type": "json",
         "repeated": false,
         "required": false,
-        "description": "`null` (the default) renders every page in the order hosted-login.md §Pages gives."
+        "description": "`null` (the default) renders every page in its standard order."
       },
       {
         "name": "custom_css",
@@ -2818,7 +2818,7 @@ export const OPERATIONS: Readonly<Record<string, GeneratedOperation>> = {
         "type": "json",
         "repeated": false,
         "required": true,
-        "description": "One of the two `layout.kind` shapes."
+        "description": "The page layout: one of two `kind`s."
       },
       {
         "name": "links",
@@ -3395,7 +3395,7 @@ export const OPERATIONS: Readonly<Record<string, GeneratedOperation>> = {
         "type": "json",
         "repeated": false,
         "required": true,
-        "description": "One of the three `background.kind` shapes."
+        "description": "The page background: one of three `kind`s."
       },
       {
         "name": "color_scheme",
@@ -3411,7 +3411,7 @@ export const OPERATIONS: Readonly<Record<string, GeneratedOperation>> = {
         "type": "json",
         "repeated": false,
         "required": true,
-        "description": "The palette: seven required six-digit hex entries, and three optional ones."
+        "description": "The palette: seven required six-digit hex colours, and three optional ones."
       },
       {
         "name": "colors_dark",
@@ -3427,7 +3427,7 @@ export const OPERATIONS: Readonly<Record<string, GeneratedOperation>> = {
         "type": "json",
         "repeated": false,
         "required": false,
-        "description": "`null` (the default) renders every page in the order hosted-login.md §Pages gives."
+        "description": "`null` (the default) renders every page in its standard order."
       },
       {
         "name": "custom_css",
@@ -3464,7 +3464,7 @@ export const OPERATIONS: Readonly<Record<string, GeneratedOperation>> = {
         "type": "json",
         "repeated": false,
         "required": true,
-        "description": "One of the two `layout.kind` shapes."
+        "description": "The page layout: one of two `kind`s."
       },
       {
         "name": "links",
