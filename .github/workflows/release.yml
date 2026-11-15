@@ -1,0 +1,67 @@
+# Publishes `@kleora-io/core` and then `@kleora-io/cli` to npm through trusted
+# publishing: no token exists anywhere. Each package's trusted publisher on
+# npmjs.com names this repository and this file (`release.yml`). The job runs
+# in the environment `npm`, which requires a maintainer's approval and accepts
+# only `main`.
+#
+# npm's requirements for trusted publishing: a GitHub-hosted runner, npm CLI
+# 11.5.1 or newer, Node 22.14 or newer, and `id-token: write`.
+#
+# The versions published are whatever the two `package.json` files say. A
+# package whose version is already on npm is skipped rather than refused, so
+# re-running after a partial failure (core published, cli not) is safe.
+#
+# `core` goes first because `cli` depends on it. The tarballs come from
+# `pnpm pack`, which turns the CLI's `workspace:^` dependency into a real
+# semver range (`^<core's version>`); `npm publish` then uploads them.
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: npm 11.5.1 or newer
+        run: npm install -g npm@latest && npm --version
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Test
+        run: pnpm test
+      - name: Publish @kleora-io/core, then @kleora-io/cli
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/tarballs"
+          mkdir -p "$out"
+          for dir in packages/core packages/cli; do
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            # Exact match on the printed version: an absent version is an
+            # error on current npm, but an empty answer must not read as "there".
+            if [ "$(npm view "$name@$version" version 2>/dev/null || true)" = "$version" ]; then
+              echo "$name@$version is already on npm; skipping"
+              continue
+            fi
+            rm -f "$out"/*.tgz
+            (cd "$dir" && pnpm pack --pack-destination "$out")
+            tarball=$(ls "$out"/*.tgz)
+            echo "Publishing $name@$version from $tarball"
+            npm publish "$tarball" --provenance --access public
+          done
