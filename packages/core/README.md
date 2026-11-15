@@ -12,7 +12,10 @@ The code the Kleora CLI ([`@kleora-io/cli`](../cli)) and the Kleora MCP server
 - **issuer discovery**: the issuer a device grant runs against is what the
   deployment reports at `GET /api/v1/platform`, unless one is given explicitly;
 - **the session**: one profile's credential lifecycle, with the access token
-  held in memory only;
+  held in memory only. Concurrent calls share one refresh, a lock file beside
+  the credential serialises refreshes across processes, and a credential
+  removed from the store (a logout) stops the cached access token being used
+  on the next call;
 - **a generic management API client**: a thin `fetch` wrapper that calls one
   operation of the management API with the caller's own bearer token, with
   bounded `Retry-After` handling and a cap on concurrent requests;

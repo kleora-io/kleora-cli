@@ -1,6 +1,6 @@
 {
   "name": "@kleora-io/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "The Kleora CLI: manage Apps, environments, clients, users, tenants, roles and API keys from a terminal, through the management API.",
   "license": "Apache-2.0",
