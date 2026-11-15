@@ -1,7 +1,21 @@
 # Changelog
 
-`@kleora-io/core` and `@kleora-io/cli` are released together and carry the
-same version.
+`@kleora-io/core` and `@kleora-io/cli` are released together, from one
+workflow. A release that changes only the CLI bumps only the CLI, so the two
+versions can differ; each entry says which packages it covers.
+
+## 0.1.2 — `@kleora-io/cli` only (`@kleora-io/core` stays 0.1.1)
+
+### Fixed
+
+- **`kleora logout` can no longer be undone by a refresh in flight.** The
+  store read, the revocation at the issuer and the local delete now run holding
+  the profile's credential lock (`CredentialStore.lock`, added in core 0.1.1),
+  the same lock every refresh takes. Before, another process part-way through a
+  refresh could finish after the delete and write its rotated refresh token
+  back, leaving the profile signed in. Now the logout waits for that refresh,
+  then revokes and deletes the token it stored. A failed revocation still
+  deletes locally. (kleora-io/kleora#1098)
 
 ## 0.1.1
 

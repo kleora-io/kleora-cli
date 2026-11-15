@@ -6,10 +6,17 @@
  * getting them wrong is the usual way a device-grant client is unpleasant, and
  * the unconditional half of `logout`.
  */
-import { describe, expect, it, vi } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
+import { FileCredentialStore, type CredentialStore } from '@kleora-io/core'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { run } from '../src/cli.js'
 import { EXIT } from '../src/exit.js'
-import { ISSUER, runCli } from './harness.js'
+import { RecordingIo } from '../src/output.js'
+import { BASE_URL, fakeFetch, ISSUER, runCli, type FakeFetch, type Route } from './harness.js'
 
 const DEVICE_AUTHORIZATION = JSON.stringify({
   device_code: 'device-code-1',
@@ -339,5 +346,131 @@ describe('with no explicit issuer', () => {
 
     expect(result.code).toBe(EXIT.OK)
     expect(result.calls.some((call) => call.url === '/api/v1/platform')).toBe(false)
+  })
+})
+
+// kleora-io/kleora#1098: a refresh in flight in another process holds the
+// profile's credential lock. A logout that did not take it could delete the
+// token and then watch the refresh write its rotated token back, leaving the
+// person signed in. Driven through `run` directly rather than `runCli`, because
+// the test has to hold the lock on the very store the command uses.
+describe('logout holding the credential lock', () => {
+  let root: string
+  let configDir: string
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'kleora-cli-logout-lock-'))
+    configDir = join(root, 'config')
+  })
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+  })
+
+  function logoutWith(store: CredentialStore, routes: Route[]): {
+    done: Promise<{ code: number; stderr: string }>
+    calls: FakeFetch['calls']
+    revoked: string[]
+  } {
+    const io = new RecordingIo({ stdinIsTty: false, stdoutIsTty: false, answers: [] })
+    const { fetch: fake, calls } = fakeFetch(routes)
+    // The harness records string bodies only; the revocation is a form body.
+    const revoked: string[] = []
+    const fetch: typeof globalThis.fetch = (input, init) => {
+      if (init?.body instanceof URLSearchParams) revoked.push(init.body.get('token') ?? '')
+      return fake(input, init)
+    }
+    const done = run({
+      argv: ['logout'],
+      env: { KLEORA_BASE_URL: BASE_URL, KLEORA_ISSUER: ISSUER },
+      io,
+      fetch,
+      cwd: root,
+      store,
+      configDir,
+      sleep: () => Promise.resolve(),
+    }).then((code) => ({ code, stderr: io.stderrText }))
+    return { done, calls, revoked }
+  }
+
+  it('waits for a refresh in flight, then revokes and deletes the token it stored', async () => {
+    const store = new FileCredentialStore(configDir)
+    await store.set('default', 'refresh-token-1')
+
+    let release!: () => void
+    const released = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let refreshHolding!: () => void
+    const holding = new Promise<void>((resolve) => {
+      refreshHolding = resolve
+    })
+    const refresh = store.lock('default', async () => {
+      refreshHolding()
+      await released
+      await store.set('default', 'refresh-token-2') // the rotated token
+    })
+    await holding
+
+    let finished = false
+    const { done, calls, revoked } = logoutWith(store, [{ method: 'POST', path: '/oauth/revoke', status: 200 }])
+    const loggingOut = done.then((result) => {
+      finished = true
+      return result
+    })
+
+    // Give the logout every chance to run ahead of the lock.
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    expect(finished).toBe(false)
+    expect(calls).toHaveLength(0)
+    expect(await store.get('default')).toBe('refresh-token-1')
+
+    release()
+    await refresh
+    const result = await loggingOut
+
+    expect(result.code).toBe(EXIT.OK)
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual(['POST /oauth/revoke'])
+    expect(revoked).toEqual(['refresh-token-2'])
+    expect(await store.get('default')).toBeNull()
+    expect(result.stderr).toContain('revoked at')
+  })
+
+  it('still deletes locally when the revocation fails', async () => {
+    const store = new FileCredentialStore(configDir)
+    await store.set('default', 'refresh-token-1')
+
+    const { done } = logoutWith(store, [{ method: 'POST', path: '/oauth/revoke', status: 500, body: '{}' }])
+    const result = await done
+
+    expect(result.code).toBe(EXIT.OK)
+    expect(await store.get('default')).toBeNull()
+    expect(result.stderr).toContain('could not be')
+  })
+
+  it('takes the lock for the profile it was asked about', async () => {
+    const store = new FileCredentialStore(configDir)
+    await store.set('work', 'refresh-token-1')
+    const locked: string[] = []
+    const lock = store.lock.bind(store)
+    store.lock = <T>(profile: string, fn: () => Promise<T>): Promise<T> => {
+      locked.push(profile)
+      return lock(profile, fn)
+    }
+
+    const io = new RecordingIo({ stdinIsTty: false, stdoutIsTty: false, answers: [] })
+    const { fetch } = fakeFetch([{ method: 'POST', path: '/oauth/revoke', status: 200 }])
+    const code = await run({
+      argv: ['logout', '--profile', 'work'],
+      env: { KLEORA_BASE_URL: BASE_URL, KLEORA_ISSUER: ISSUER },
+      io,
+      fetch,
+      cwd: root,
+      store,
+      configDir,
+      sleep: () => Promise.resolve(),
+    })
+
+    expect(code).toBe(EXIT.OK)
+    expect(locked).toEqual(['work'])
+    expect(await store.get('work')).toBeNull()
   })
 })

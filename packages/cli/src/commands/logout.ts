@@ -12,6 +12,13 @@
  * `refresh_token.revoked` audit event so the account's owner can see the access
  * end. Keeping the local token because the revocation failed would be the worst
  * of both outcomes.
+ *
+ * The read, the revocation and the delete all run holding the profile's
+ * credential lock (`CredentialStore.lock`), the same lock every refresh takes.
+ * Without it, another process part-way through a refresh could finish after the
+ * delete and write its rotated refresh token back, leaving the person signed
+ * in. With it, the logout waits for that refresh, then revokes and deletes the
+ * token the refresh stored (kleora-io/kleora#1098).
  */
 import { revokeRefreshToken, type CredentialStore } from '@kleora-io/core'
 
@@ -64,10 +71,19 @@ export async function logout(deps: LogoutDependencies): Promise<void> {
 }
 
 async function logoutOne(deps: LogoutDependencies, profile: string): Promise<Outcome> {
+  const { store } = deps
+  const run = (): Promise<Outcome> => revokeAndDelete(deps, profile)
+  // `lock` is optional on the interface; every store `createCredentialStore`
+  // returns carries it.
+  const outcome = await (store.lock === undefined ? run() : store.lock(profile, run))
+  forgetProfile(deps.configDir, profile)
+  return outcome
+}
+
+async function revokeAndDelete(deps: LogoutDependencies, profile: string): Promise<Outcome> {
   const { config, store, fetch: fetchImpl } = deps
   const refreshToken = await store.get(profile)
   if (refreshToken === null) {
-    forgetProfile(deps.configDir, profile)
     return { profile, hadCredential: false, revoked: false, revocationError: undefined }
   }
 
@@ -90,7 +106,6 @@ async function logoutOne(deps: LogoutDependencies, profile: string): Promise<Out
 
   // Unconditional, and after the attempt either way.
   await store.delete(profile)
-  forgetProfile(deps.configDir, profile)
   return { profile, hadCredential: true, revoked, revocationError }
 }
 
