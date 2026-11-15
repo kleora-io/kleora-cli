@@ -1,0 +1,57 @@
+# Build, lint, typecheck and test both packages, plus a drift check of the
+# generated operation table against the OpenAPI document Kleora serves.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # First: the CLI imports `@kleora-io/core` through its built entry point,
+      # exactly as it will from npm, so lint, typecheck and test need it.
+      - name: Build
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      # Re-downloads https://api.kleora.io/api/v1/openapi.json into
+      # `openapi/management-v1.json` and regenerates
+      # `packages/cli/src/generated/operations.ts` from it. A diff means the
+      # deployed API moved: run `pnpm generate:operations` and commit the result.
+      - name: Generated operations match the deployed document
+        run: |
+          pnpm generate:operations
+          git diff --exit-code -- openapi packages/cli/src/generated
+          test -z "$(git status --porcelain -- openapi packages/cli/src/generated)"

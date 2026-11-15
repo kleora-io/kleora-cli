@@ -1,0 +1,6 @@
+packages:
+  - packages/*
+
+# Build scripts are opt-in; tsup and vitest need esbuild's.
+allowBuilds:
+  esbuild: true

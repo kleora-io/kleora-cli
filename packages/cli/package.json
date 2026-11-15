@@ -1,0 +1,58 @@
+{
+  "name": "@kleora-io/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The Kleora CLI: manage Apps, environments, clients, users, tenants, roles and API keys from a terminal, through the management API.",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/kleora-io/kleora-cli/tree/main/packages/cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kleora-io/kleora-cli.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/kleora-io/kleora-cli/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "kleora": "./dist/index.js",
+    "kleora-auth": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "generate:operations": "node scripts/generate-operations.mjs",
+    "build": "tsup",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@kleora-io/core": "workspace:^"
+  },
+  "optionalDependencies": {
+    "@napi-rs/keyring": "^2.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.10.0",
+    "eslint": "^10.0.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.68.0",
+    "vitest": "^4.1.11"
+  }
+}

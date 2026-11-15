@@ -1,0 +1,57 @@
+{
+  "name": "@kleora-io/core",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The credential store, device-grant client, in-memory session and generic management API client shared by the Kleora CLI and the Kleora MCP server.",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/kleora-io/kleora-cli/tree/main/packages/core#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kleora-io/kleora-cli.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/kleora-io/kleora-cli/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "optionalDependencies": {
+    "@napi-rs/keyring": "^2.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.10.0",
+    "eslint": "^10.0.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.68.0",
+    "vitest": "^4.1.11"
+  }
+}
