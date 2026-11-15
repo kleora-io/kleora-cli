@@ -1,6 +1,6 @@
 {
   "name": "@kleora-io/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "The credential store, device-grant client, in-memory session and generic management API client shared by the Kleora CLI and the Kleora MCP server.",
   "license": "Apache-2.0",

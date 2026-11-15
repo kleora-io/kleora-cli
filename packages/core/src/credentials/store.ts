@@ -17,11 +17,23 @@ import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync }
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
+import { withFileLock } from './lock.js'
+
 /** One stored credential, keyed by profile. */
 export interface CredentialStore {
   get(profile: string): Promise<string | null>
   set(profile: string, refreshToken: string): Promise<void>
   delete(profile: string): Promise<void>
+  /**
+   * Runs `fn` holding this profile's cross-process lock, so that two
+   * processes sharing the store never present one refresh token twice
+   * (`Session` takes it around every refresh). Optional so that a store
+   * written for a test still type-checks; a store without it is serialised
+   * within one `Session` only. Both stores here implement it with a lock file
+   * in the config directory (`credentials-<profile>.lock`) — the keychain
+   * store too, since a keychain has no lock of its own.
+   */
+  lock?<T>(profile: string, fn: () => Promise<T>): Promise<T>
   /** For `kleora_whoami` and diagnostics — never the secret itself. */
   readonly backend: 'keychain' | 'file'
 }
@@ -134,6 +146,10 @@ class KeychainCredentialStore implements CredentialStore {
       await this.#fallback.delete(profile)
     }
   }
+
+  lock<T>(profile: string, fn: () => Promise<T>): Promise<T> {
+    return this.#fallback.lock(profile, fn)
+  }
 }
 
 /**
@@ -194,6 +210,10 @@ export class FileCredentialStore implements CredentialStore {
       if (isNotFound(error)) return Promise.resolve()
       return Promise.reject(asError(error))
     }
+  }
+
+  lock<T>(profile: string, fn: () => Promise<T>): Promise<T> {
+    return withFileLock(join(this.#dir, `credentials-${encodeURIComponent(profile)}.lock`), fn)
   }
 
   #path(profile: string): string {

@@ -12,7 +12,7 @@
  * should not carry, and a unit test asserts it equals the manifest so the two
  * cannot drift silently.
  */
-export const VERSION = '0.1.0'
+export const VERSION = '0.1.1'
 
 /** `kleora-cli/{version}`, sent with every request this CLI makes. */
 export const USER_AGENT = `kleora-cli/${VERSION}`

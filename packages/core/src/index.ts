@@ -33,6 +33,12 @@ export {
 } from './credentials/store.js'
 
 export {
+  CredentialLockTimeout,
+  withFileLock,
+  type FileLockOptions,
+} from './credentials/lock.js'
+
+export {
   OAuthError,
   pollDeviceToken,
   refreshAccessToken,
@@ -54,6 +60,7 @@ export {
 export {
   Session,
   SessionNotReady,
+  type AuthorizationRequiredReason,
   type NotReadyState,
   type SessionOptions,
   type SessionState,

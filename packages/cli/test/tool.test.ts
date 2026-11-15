@@ -165,7 +165,7 @@ describe('version', () => {
       ],
     })
     expect(result.code).toBe(EXIT.OK)
-    expect(result.stdout).toContain('kleora 0.1.0')
+    expect(result.stdout).toContain('kleora 0.1.1')
     expect(result.stdout).toContain('1.2.3')
     expect(result.stdout).toContain('2026.9.17')
   })
